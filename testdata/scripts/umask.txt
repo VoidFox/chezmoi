@@ -1,0 +1,40 @@
+[windows] skip 'UNIX only'
+[!umask:022] skip
+
+chmod 777 $HOME/.file
+
+# test that chezmoi diff prints a diff when a file's permissions are different
+chezmoi diff
+cmp stdout golden/diff
+
+# test that chezmoi verify fails when a file's permissions are different
+! chezmoi verify
+
+# test that chezmoi apply updates file permissions
+chezmoi apply --force
+chezmoi diff
+! stdout .
+chezmoi verify
+
+# test that chezmoi ignores incorrect permissions in the persistent state if the actual permissions match
+chezmoi state get --bucket=entryState --key=$HOME/.file
+cmp stdout golden/state-get
+chezmoi state set --bucket=entryState --key=$HOME/.file --value={"type":"file","mode":0,"contentsSHA256":"634a4dd193c7b3b926d2e08026aa81a416fd41cec52854863b974af422495663"}
+chezmoi diff
+! stdout .
+chezmoi verify
+
+-- golden/diff --
+diff --git a/.file b/.file
+old mode 100777
+new mode 100644
+-- golden/state-get --
+{
+  "type": "file",
+  "mode": 420,
+  "contentsSHA256": "634a4dd193c7b3b926d2e08026aa81a416fd41cec52854863b974af422495663"
+}
+-- home/user/.file --
+# contents of .file
+-- home/user/.local/share/chezmoi/dot_file --
+# contents of .file
